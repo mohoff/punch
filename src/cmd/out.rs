@@ -2,19 +2,20 @@ use ::csv::Writer;
 use crate::io;
 use crate::csv;
 use chrono::{Local};
-use std::result::Result;
+
+use crate::err::*;
 
 
-pub fn run() -> Result<(), &'static str> {
+pub fn run() -> Result<()> {
     println!("running subcommand OUT");
 
-    let file_path = io::build_path();
-    io::validate_file_exists(&file_path);
+    let file_path = io::build_path()?;
+    io::validate_file_exists(&file_path)?;
 
     let now = Local::now();
 
     let mut writer = Writer::from_writer(vec![]);
-    let mut iter = csv::get_records(&file_path);
+    let mut iter = csv::get_records(&file_path)?;
     
     while let Some(result) = iter.next() {
         let record = match iter.peek() {
@@ -23,15 +24,15 @@ pub fn run() -> Result<(), &'static str> {
             // last element which we want to modify
             None => {
                 let last = result.unwrap();
-                csv::validate_out(&last);
+                csv::validate_out(&last)?;
                 csv::build_terminated_record(now, &last)
             },
         };
 
-        writer.write_record(record.iter()).expect("Unable to write record to buffer");
+        writer.write_record(record.iter()).chain_err(|| "Could not write record to buffer")?;
     };
 
-    io::flush_to_file(writer, &file_path);
+    io::flush_to_file(writer, &file_path).chain_err(|| "Could not flush data to file")?;
 
     Ok(())
 }

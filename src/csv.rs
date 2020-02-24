@@ -1,11 +1,13 @@
 use std::fs;
-use csv::{ReaderBuilder, WriterBuilder, StringRecord, Error};
+use csv::{Reader, ReaderBuilder, WriterBuilder, StringRecord, Error};
 use chrono::DateTime;
 use chrono::offset::Local;
 
 use serde::{Serialize, Deserialize};
 
 use std::path::PathBuf;
+
+use crate::err::*;
 
 #[derive(Debug, Deserialize, Serialize)]
 struct Record {
@@ -15,29 +17,32 @@ struct Record {
     note: Option<String>,
 }
 
-
-pub fn read_last(path: &PathBuf) -> Option<StringRecord> {
-    let mut reader = ReaderBuilder::new()
+fn build_reader(file_path: &PathBuf) -> Result<Reader<std::fs::File>> {
+    ReaderBuilder::new()
         .has_headers(false)
-        .from_path(path)
-        .unwrap();
-
-    reader.records().last().map_or(None, |r| r.ok())
+        .flexible(true)
+        .from_path(file_path)
+        .chain_err(| | "Could not read file")
 }
 
-pub fn get_records(file_path: &PathBuf) -> std::iter::Peekable<impl Iterator<Item=Result<StringRecord, Error>>> {
-    ReaderBuilder::new()
-        .flexible(true)
-        .has_headers(false)
-        .from_path(&file_path)
-        .expect("Could not read file")
-        .into_records()
-        .peekable()
+pub fn read_last(file_path: &PathBuf) -> Result<StringRecord> {
+    let mut reader = build_reader(file_path)?;
+
+    match reader.records().last() {
+        None => Err(ErrorKind::FileIsEmpty.into()),
+        Some(last) => last.chain_err(|| "Error while reading last record"),
+    }
+}
+
+pub fn get_records(file_path: &PathBuf) -> Result<std::iter::Peekable<impl Iterator<Item=std::result::Result<StringRecord, Error>>>> {
+    let reader = build_reader(file_path)?;
+
+    Ok(reader.into_records().peekable())
 }
 
 
 pub fn build_first_record(timestamp: DateTime<Local>) -> StringRecord {
-    StringRecord::from(vec![0.to_string(), timestamp.to_string()])
+    StringRecord::from(vec!["0", &timestamp.to_string()])
 }
 
 pub fn build_new_record(timestamp: DateTime<Local>, last_record: &StringRecord) -> StringRecord {
@@ -60,24 +65,30 @@ pub fn build_terminated_record(timestamp: DateTime<Local>, last_record: &StringR
     new
 }
 
-pub fn validate_in(record: &StringRecord) {
+pub fn validate_in(record: &StringRecord) -> Result<()> {
     if record.len() != 3 {
-        panic!("Cannot start new entry without last record being terminated")
+        Err(ErrorKind::LastRecordHasIncorrectStateForIn.into())
+    } else {
+        Ok(())
     }
 }
 
-pub fn validate_out(record: &StringRecord) {
+pub fn validate_out(record: &StringRecord) -> Result<()> {
     if record.len() != 2 {
-        panic!("Cannot end entry as last record was terminated already")
+        Err(ErrorKind::LastRecordHasIncorrectStateForOut.into())
+    } else {
+        Ok(())
     }
 }
 
-pub fn append_record(file: fs::File, record: StringRecord) -> std::result::Result<(), std::io::Error> {
+pub fn append_record(file: fs::File, record: StringRecord) -> Result<()> {
     let mut writer = WriterBuilder::new()
         .flexible(true)
         .has_headers(false)
         .from_writer(file);
 
     writer.write_record(record.iter())?;
-    writer.flush()
+    writer.flush()?;
+
+    Ok(())
 }
