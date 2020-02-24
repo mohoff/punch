@@ -29,6 +29,7 @@ fn run() -> Result<()> {
     match matches.subcommand_name() {
         Some("in") => cmd::inn::run(),
         Some("out") => cmd::out::run(),
+        Some("show") => cmd::show::run(),
         // clap takes care of unmatched subcommands
         _ => unreachable!()
     }

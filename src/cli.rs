@@ -12,5 +12,9 @@ pub fn get_matches<'a>() -> ArgMatches<'a> {
             SubCommand::with_name("out")
                 .about("Punch out - stop tracking time")
         )
+        .subcommand(
+            SubCommand::with_name("show")
+                .about("Show details of a punch card")
+        )
         .get_matches()
 }

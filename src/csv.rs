@@ -1,28 +1,67 @@
 use std::fs;
+use std::fmt;
 use csv::{Reader, ReaderBuilder, WriterBuilder, StringRecord, Error};
-use chrono::DateTime;
-use chrono::offset::Local;
+use chrono::{DateTime, Duration};
+use chrono::offset::{Local};
+use colored::*;
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize};
 
 use std::path::PathBuf;
 
 use crate::err::*;
 
-#[derive(Debug, Deserialize, Serialize)]
-struct Record {
+#[derive(Debug, Deserialize)]
+pub struct Record {
     i: usize,
-    start: String,
-    end: Option<String>,
+    start: DateTime<Local>,
+    #[serde(default)]
+    end: Option<DateTime<Local>>,
+    #[serde(default)]
     note: Option<String>,
 }
 
-fn build_reader(file_path: &PathBuf) -> Result<Reader<std::fs::File>> {
+impl Record {
+    fn end(&self) -> DateTime<Local> {
+        self.end.unwrap_or(Local::now())
+    }
+    fn display_end(&self) -> String {
+        self.end.map_or("ongoing...".to_string(), |date| date.to_rfc3339())
+    }
+    fn duration(&self) -> Duration {
+        self.end().signed_duration_since(self.start)
+    }
+    fn display_duration(&self) -> String {
+        let d = self.duration();
+
+        // wow there's no built-in Duration formatting
+        let h = d.num_hours();
+        let min = d.num_minutes() - h * 60;
+        let sec = d.num_seconds() - h * 3600 - min * 60;
+        format!("{:0>#2}:{:0>#2}:{:0>#2}", h, min, sec)
+    }
+}
+
+impl fmt::Display for Record {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}: {} {} {:<33} ({})",
+            self.i.to_string().dimmed(),
+            self.start.to_rfc3339(),
+            "->".dimmed(),
+            self.display_end(),
+            self.display_duration().green()
+        )
+    }
+}
+
+pub fn build_reader(file_path: &PathBuf) -> Result<Reader<std::fs::File>> {
     ReaderBuilder::new()
         .has_headers(false)
         .flexible(true)
         .from_path(file_path)
-        .chain_err(| | "Could not read file")
+        .chain_err(|| "Could not initialize reader")
 }
 
 pub fn read_last(file_path: &PathBuf) -> Result<StringRecord> {
@@ -42,7 +81,7 @@ pub fn get_records(file_path: &PathBuf) -> Result<std::iter::Peekable<impl Itera
 
 
 pub fn build_first_record(timestamp: DateTime<Local>) -> StringRecord {
-    StringRecord::from(vec!["0", &timestamp.to_string()])
+    StringRecord::from(vec!["0", &timestamp.to_rfc3339()])
 }
 
 pub fn build_new_record(timestamp: DateTime<Local>, last_record: &StringRecord) -> StringRecord {
@@ -53,14 +92,14 @@ pub fn build_new_record(timestamp: DateTime<Local>, last_record: &StringRecord) 
         .checked_add(1);
 
     match index {
-        Some(i) => StringRecord::from(vec![i.to_string(), timestamp.to_string()]),
+        Some(i) => StringRecord::from(vec![i.to_string(), timestamp.to_rfc3339()]),
         None => panic!("Auto-increment of record index caused integer overflow."),
     }
 }
 
 pub fn build_terminated_record(timestamp: DateTime<Local>, last_record: &StringRecord) -> StringRecord {
     let mut new = last_record.clone();
-    new.push_field(&timestamp.to_string());
+    new.push_field(&timestamp.to_rfc3339());
 
     new
 }
