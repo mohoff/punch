@@ -2,13 +2,11 @@ use ::csv::Writer;
 use crate::io;
 use crate::csv;
 use chrono::{Local};
-
 use crate::err::*;
+use colored::*;
 
 
 pub fn run() -> Result<()> {
-    println!("running subcommand OUT");
-
     let file_path = io::build_path()?;
     io::validate_file_exists(&file_path)?;
 
@@ -34,5 +32,12 @@ pub fn run() -> Result<()> {
 
     io::flush_to_file(writer, &file_path).chain_err(|| "Could not flush data to file")?;
 
+    print_success(now.to_rfc3339());
+
     Ok(())
+}
+
+fn print_success(time: String) {
+    let suffix = format!("at {}", time);
+    println!("👊 out - {}", suffix.dimmed());
 }

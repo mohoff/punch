@@ -1,5 +1,5 @@
 use std::fmt;
-use chrono::{DateTime, Duration};
+use chrono::{DateTime, Duration, Datelike};
 use chrono::offset::{Local};
 use colored::*;
 use serde::{Deserialize};
@@ -29,6 +29,21 @@ impl Record {
     fn display_duration(&self) -> String {
         format_duration(self.duration())
     }
+    pub fn unwrap(r: Result<Self, csv::Error>) -> Self {
+        r.unwrap()
+    }
+    pub fn group_by_interval(interval: Interval) -> Box<dyn Fn(Self) -> (u32, Self)> {
+        Box::new(move |r: Self| {
+            let key = match interval {
+                Interval::Day => r.start.day(),
+                Interval::Week => r.start.iso_week().week(),
+                Interval::Month => r.start.month(),
+                Interval::Year => r.start.year() as u32,
+            };
+    
+            (key, r)
+        })
+    }
 }
 
 fn format_duration(d: Duration) -> String {
@@ -44,21 +59,33 @@ impl fmt::Display for Record {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{}: {} {} {:<33} ({})",
+            "{}: {} {}  {:<33} ({})",
             self.i.to_string().dimmed(),
             self.start.to_rfc3339(),
-            "->".dimmed(),
+            "⟶".dimmed(),
             self.display_end(),
             self.display_duration().green()
         )
     }
 }
 
-pub struct RecordBucket(Vec<Record>);
+pub struct RecordBucket(Vec<Record>, Interval);
+
+impl fmt::Display for RecordBucket {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "{}", self.name().bold().underline().to_string())?;
+        writeln!(f, "{}", self.stats_formatted())?;
+        for record in self.records_formatted() {
+            writeln!(f, "{}", record)?;
+        }
+
+        Ok(())
+    }
+}
 
 impl RecordBucket {
-    pub fn new() -> Self {
-        RecordBucket(Vec::new())
+    pub fn new(interval: Interval) -> Self {
+        RecordBucket(Vec::new(), interval)
     }
     pub fn add(&mut self, record: Record) {
         self.0.push(record)
@@ -84,10 +111,10 @@ impl RecordBucket {
         sum / (self.size() as i32)
     }
 
-    pub fn name(&self, interval: Interval) -> String {
+    pub fn name(&self) -> String {
         let date_str = (self.0)[0].start;
 
-        let formatted = match interval {
+        let formatted = match self.1 {
             Interval::Day => date_str.format("%F (%A)"),
             Interval::Week => date_str.format("CW %U (%B %Y)"),
             Interval::Month => date_str.format("%B %Y"),
@@ -96,13 +123,11 @@ impl RecordBucket {
 
         formatted.to_string()
     }
-    pub fn name_formatted(&self, interval: Interval) -> String {
-        self.name(interval).bold().underline().to_string()
-    }
 
     pub fn stats_formatted(&self) -> String {
         format!(
-            "sum: {}, avg: {}",
+            "{} ⏺️  - sum: {}, avg: {}",
+            self.size().to_string().green(),
             format_duration(self.duration_sum()).green(),
             format_duration(self.duration_avg()).green()
         )

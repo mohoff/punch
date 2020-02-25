@@ -10,15 +10,15 @@ const PUNCH_HOME_DIR_PATH: &'static str = ".punch";
 
 pub fn build_path() -> Result<PathBuf> {
     let home_dir = dirs::home_dir().ok_or(ErrorKind::HomeDirNotFound)?;
-
-    println!("homedir: {:?}", home_dir);
+    dbg!(&home_dir);
 
     let dir = home_dir.join(PUNCH_HOME_DIR_PATH);
-    println!("dir: {:?}", dir);
+    dbg!(&dir);
+
     fs::create_dir_all(&dir).expect("Could not create directory");
 
     let file_path = dir.join(PUNCH_FILE);
-    println!("file_path: {:?}", file_path);
+    dbg!(&file_path);
 
     Ok(file_path)
 }

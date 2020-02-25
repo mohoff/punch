@@ -2,14 +2,9 @@ use crate::csv;
 use crate::io;
 use crate::err::*;
 use chrono::{Local};
-//use std::result::Result;
-//use err::*;
-
-
+use colored::*;
 
 pub fn run() -> Result<()> {
-    println!("running subcommand IN");
-
     let file_path = io::build_path()?;
 
     let file = io::create_file_if_not_exists(&file_path).chain_err(|| "Could not create file")?;
@@ -25,9 +20,14 @@ pub fn run() -> Result<()> {
         },
     };
 
-    println!("appending record: {:?}", record);
-
     csv::append_record(file, record).chain_err(|| "Unable to append record to file")?;
 
+    print_success(now.to_rfc3339());
+
     Ok(())
+}
+
+fn print_success(time: String) {
+    let suffix = format!("at {}", time);
+    println!("👊 in - {}", suffix.dimmed());
 }
