@@ -9,6 +9,7 @@ mod cli;
 mod cmd;
 mod io;
 mod csv;
+mod record;
 mod err;
 
 use err::*;

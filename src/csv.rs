@@ -5,56 +5,9 @@ use chrono::{DateTime, Duration};
 use chrono::offset::{Local};
 use colored::*;
 
-use serde::{Deserialize};
-
 use std::path::PathBuf;
 
 use crate::err::*;
-
-#[derive(Debug, Deserialize)]
-pub struct Record {
-    i: usize,
-    start: DateTime<Local>,
-    #[serde(default)]
-    end: Option<DateTime<Local>>,
-    #[serde(default)]
-    note: Option<String>,
-}
-
-impl Record {
-    fn end(&self) -> DateTime<Local> {
-        self.end.unwrap_or(Local::now())
-    }
-    fn display_end(&self) -> String {
-        self.end.map_or("ongoing...".to_string(), |date| date.to_rfc3339())
-    }
-    fn duration(&self) -> Duration {
-        self.end().signed_duration_since(self.start)
-    }
-    fn display_duration(&self) -> String {
-        let d = self.duration();
-
-        // wow there's no built-in Duration formatting
-        let h = d.num_hours();
-        let min = d.num_minutes() - h * 60;
-        let sec = d.num_seconds() - h * 3600 - min * 60;
-        format!("{:0>#2}:{:0>#2}:{:0>#2}", h, min, sec)
-    }
-}
-
-impl fmt::Display for Record {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}: {} {} {:<33} ({})",
-            self.i.to_string().dimmed(),
-            self.start.to_rfc3339(),
-            "->".dimmed(),
-            self.display_end(),
-            self.display_duration().green()
-        )
-    }
-}
 
 pub fn build_reader(file_path: &PathBuf) -> Result<Reader<std::fs::File>> {
     ReaderBuilder::new()
