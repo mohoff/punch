@@ -1,12 +1,13 @@
 use crate::csv;
-use crate::record::{Record,RecordBucket,BucketType};
-use std::collections::{BTreeMap,HashSet};
+use crate::record::{Record, RecordBucket};
+use crate::cli::Interval;
+use std::collections::BTreeMap;
 use chrono::Datelike;
 use crate::io;
 use crate::err::*;
 
 
-pub fn run() -> Result<()> {
+pub fn run(interval: Interval) -> Result<()> {
     println!("running subcommand SHOW");
 
     let file_path = io::build_path()?;
@@ -19,9 +20,6 @@ pub fn run() -> Result<()> {
     //     println!("{}", record);
     // }
 
-    // improve make this a cli param
-    let group_by = BucketType::DAY;
-
     let grouped_records = reader.deserialize()
         // IMPROVE: idiomatic way?
         .map(|r| {
@@ -29,11 +27,11 @@ pub fn run() -> Result<()> {
             record
         })
         .map(|r| {
-            let key = match group_by {
-                BucketType::YEAR => r.start.year() as u32,
-                BucketType::MONTH => r.start.month(),
-                BucketType::DAY => r.start.day(),
-                _ => r.start.day(),
+            let key = match interval {
+                Interval::Day => r.start.day(),
+                Interval::Week => r.start.iso_week().week(),
+                Interval::Month => r.start.month(),
+                Interval::Year => r.start.year() as u32,
             };
 
             (key, r)
@@ -45,10 +43,8 @@ pub fn run() -> Result<()> {
             acc
         });
 
-    // TODO: implement struct RecordBucket(Vec<Record>) with methods .duration_sum/max/min/avg, .size
-    // and .bucket_name(groupby: GroupBy)
     grouped_records.values().for_each(|bucket| {
-        println!("{}", bucket.name_formatted(&group_by));
+        println!("{}", bucket.name_formatted(interval));
         println!("{}", bucket.stats_formatted());
         for record in bucket.records_formatted() {
             println!("{}", record);

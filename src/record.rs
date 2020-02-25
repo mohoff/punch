@@ -4,6 +4,8 @@ use chrono::offset::{Local};
 use colored::*;
 use serde::{Deserialize};
 
+use crate::cli::Interval;
+
 #[derive(Debug, Deserialize)]
 pub struct Record {
     i: usize,
@@ -52,13 +54,6 @@ impl fmt::Display for Record {
     }
 }
 
-pub enum BucketType {
-    DAY,
-    WEEK,
-    MONTH,
-    YEAR,
-}
-
 pub struct RecordBucket(Vec<Record>);
 
 impl RecordBucket {
@@ -89,18 +84,20 @@ impl RecordBucket {
         sum / (self.size() as i32)
     }
 
-    pub fn name(&self, bucket_type: &BucketType) -> String {
+    pub fn name(&self, interval: Interval) -> String {
         let date_str = (self.0)[0].start;
 
-        match bucket_type {
-            BucketType::DAY => date_str.format("%F (%A)").to_string(),
-            BucketType::WEEK => date_str.format("%U (%B %Y)").to_string(),
-            BucketType::MONTH => date_str.format("%B %Y").to_string(),
-            BucketType::YEAR => date_str.format("%Y").to_string(),
-        }
+        let formatted = match interval {
+            Interval::Day => date_str.format("%F (%A)"),
+            Interval::Week => date_str.format("CW %U (%B %Y)"),
+            Interval::Month => date_str.format("%B %Y"),
+            Interval::Year => date_str.format("%Y"),
+        };
+
+        formatted.to_string()
     }
-    pub fn name_formatted(&self, bucket_type: &BucketType) -> String {
-        self.name(bucket_type).bold().underline().to_string()
+    pub fn name_formatted(&self, interval: Interval) -> String {
+        self.name(interval).bold().underline().to_string()
     }
 
     pub fn stats_formatted(&self) -> String {

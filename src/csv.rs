@@ -1,9 +1,7 @@
 use std::fs;
-use std::fmt;
 use csv::{Reader, ReaderBuilder, WriterBuilder, StringRecord, Error};
-use chrono::{DateTime, Duration};
-use chrono::offset::{Local};
-use colored::*;
+use chrono::DateTime;
+use chrono::offset::Local;
 
 use std::path::PathBuf;
 
