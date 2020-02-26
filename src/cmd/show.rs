@@ -14,11 +14,11 @@ pub fn run(interval: Interval) -> Result<()> {
 
     let bucket_map = reader.deserialize()
         .map(Record::unwrap)
-        // IMPROVE: group_by_interval and fold do similar things -> this can be improved
-        .map(Record::group_by_interval(interval))
-        .fold(BTreeMap::new(), |mut acc, (key, record)| {
-            let bucket = acc.entry(key).or_insert(RecordBucket::new(interval));
-            bucket.add(record);
+        .fold(BTreeMap::new(), |mut acc, record| {
+            let key = record.bucket_key(interval);
+            acc.entry(key)
+                .or_insert(RecordBucket::new(interval))
+                .add(record);
 
             acc
         });

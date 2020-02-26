@@ -32,17 +32,13 @@ impl Record {
     pub fn unwrap(r: Result<Self, csv::Error>) -> Self {
         r.unwrap()
     }
-    pub fn group_by_interval(interval: Interval) -> Box<dyn Fn(Self) -> (u32, Self)> {
-        Box::new(move |r: Self| {
-            let key = match interval {
-                Interval::Day => r.start.day(),
-                Interval::Week => r.start.iso_week().week(),
-                Interval::Month => r.start.month(),
-                Interval::Year => r.start.year() as u32,
-            };
-    
-            (key, r)
-        })
+    pub fn bucket_key(&self, interval: Interval) -> u32 {
+        match interval {
+            Interval::Day => self.start.day(),
+            Interval::Week => self.start.iso_week().week(),
+            Interval::Month => self.start.month(),
+            Interval::Year => self.start.year() as u32,
+        }
     }
     pub fn display_aligned_with_records(&self, num_records: usize) -> String {
         let pad_left = num_records.to_string().len();
@@ -70,7 +66,7 @@ fn format_duration(d: Duration) -> String {
 
 impl fmt::Display for Record {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "{}", self.display_aligned_with_records(0))
+        write!(f, "{}", self.display_aligned_with_records(0))
     }
 }
 

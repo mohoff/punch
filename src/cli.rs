@@ -1,4 +1,4 @@
-use clap::{App, SubCommand, Arg, ArgMatches};
+use clap::{App, SubCommand, AppSettings, Arg, ArgMatches};
 
 arg_enum!{
     #[derive(Clone, Copy, Debug)]
@@ -13,7 +13,12 @@ arg_enum!{
 pub fn get_matches<'a>() -> ArgMatches<'a> {
     App::new("punch")
         .version(crate_version!())
+        .version_short("v")
         .author("Moritz Hoffmann <mohoff@web.de>")
+        .settings(&[
+            AppSettings::SubcommandRequiredElseHelp,
+            AppSettings::GlobalVersion
+        ])
         .subcommand(
             SubCommand::with_name("in")
                 .about("Punch in - start tracking time")

@@ -5,8 +5,6 @@ error_chain! {
         Clap(::clap::Error);
         Io(::std::io::Error);
         Csv(::csv::Error);
-        //SyntectError(::syntect::LoadingError);
-        //ParseIntError(::std::num::ParseIntError);
     }
 
     errors {
