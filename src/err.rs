@@ -11,16 +11,19 @@ error_chain! {
         HomeDirNotFound {
             display("Failed to determine home directory."),
         }
-        FileDoesNotExist(file_path: String) {
-            display("File does not exist: {}", file_path),
+        FileDoesNotExist(path: String) {
+            display("File does not exist: {}", path),
+        }
+        InvalidFile(path: String) {
+            display("Invalid file: {}", path),
         }
         FileIsEmpty {
             display("File is empty"),
         }
-        LastRecordHasIncorrectStateForIn {
+        IncorrectCardStateForIn {
             display("Cannot punch in. Did you punch out last time?"),
         }
-        LastRecordHasIncorrectStateForOut {
+        IncorrectCardStateForOut {
             display("Cannot punch out. Did you punch in before?"),
         }
     }

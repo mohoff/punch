@@ -3,14 +3,13 @@ extern crate clap;
 #[macro_use]
 extern crate error_chain;
 
-use std::process;
-
 mod cli;
 mod cmd;
-mod io;
-mod csv;
+mod card;
 mod record;
 mod err;
+
+use std::process;
 
 use err::*;
 use cli::Interval;

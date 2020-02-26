@@ -1,36 +1,25 @@
 use std::fmt;
+
 use chrono::{DateTime, Duration, Datelike};
 use chrono::offset::{Local};
+use serde::{Deserialize, Serialize};
 use colored::*;
-use serde::{Deserialize};
 
 use crate::cli::Interval;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Record {
-    i: usize,
+    pub i: usize,
     pub start: DateTime<Local>,
     #[serde(default)]
-    end: Option<DateTime<Local>>,
+    pub end: Option<DateTime<Local>>,
     #[serde(default)]
-    note: Option<String>,
+    pub note: Option<String>,
 }
 
 impl Record {
-    fn end(&self) -> DateTime<Local> {
-        self.end.unwrap_or(Local::now())
-    }
-    fn display_end(&self) -> String {
-        self.end.map_or("ongoing...".to_string(), |date| date.to_rfc3339())
-    }
-    fn duration(&self) -> Duration {
-        self.end().signed_duration_since(self.start)
-    }
-    fn display_duration(&self) -> String {
-        format_duration(self.duration())
-    }
-    pub fn unwrap(r: Result<Self, csv::Error>) -> Self {
-        r.unwrap()
+    pub fn is_terminated(&self) -> bool {
+        self.end.is_some() && self.start <= self.end.unwrap()
     }
     pub fn bucket_key(&self, interval: Interval) -> u32 {
         match interval {
@@ -53,6 +42,18 @@ impl Record {
             pad = pad_left
         )
     }
+    fn end(&self) -> DateTime<Local> {
+        self.end.unwrap_or(Local::now())
+    }
+    fn display_end(&self) -> String {
+        self.end.map_or("ongoing...".to_string(), |date| date.to_rfc3339())
+    }
+    fn duration(&self) -> Duration {
+        self.end().signed_duration_since(self.start)
+    }
+    fn display_duration(&self) -> String {
+        format_duration(self.duration())
+    }
 }
 
 fn format_duration(d: Duration) -> String {
@@ -62,6 +63,17 @@ fn format_duration(d: Duration) -> String {
     let sec = d.num_seconds() - h * 3600 - min * 60;
 
     format!("{:0>#2}:{:0>#2}:{:0>#2}", h, min, sec)
+}
+
+impl From<(DateTime<Local>, usize)> for Record {
+    fn from((timestamp, num_existing): (DateTime<Local>, usize)) -> Self {
+        Record {
+            i: num_existing,
+            start: timestamp,
+            end: None,
+            note: None,
+        }
+    }
 }
 
 impl fmt::Display for Record {
@@ -92,27 +104,6 @@ impl RecordBucket {
     pub fn add(&mut self, record: Record) {
         self.0.push(record)
     }
-    fn size(&self) -> usize {
-        self.0.len()
-    }
-
-    fn duration_sum(&self) -> Duration {
-        // Map to std::time::Duration and make use of its Sum trait implementation.
-        let sum = self.0.iter()
-            .map(|r| r.duration()
-                .to_std()
-                .expect("Failed to convert duration")
-            ).sum();
-
-        Duration::from_std(sum).expect("Failed to compute duration sum")
-    }
-
-    fn duration_avg(&self) -> Duration {
-        let sum = self.duration_sum();
-
-        sum / (self.size() as i32)
-    }
-
     pub fn name(&self) -> String {
         let date_str = (self.0)[0].start;
 
@@ -125,7 +116,6 @@ impl RecordBucket {
 
         formatted.to_string()
     }
-
     pub fn stats_formatted(&self) -> String {
         format!(
             "{} ⏺️  - sum: {}, avg: {}",
@@ -133,6 +123,24 @@ impl RecordBucket {
             format_duration(self.duration_sum()).green(),
             format_duration(self.duration_avg()).green()
         )
+    }
+    fn size(&self) -> usize {
+        self.0.len()
+    }
+    fn duration_sum(&self) -> Duration {
+        // Map to std::time::Duration and make use of its Sum trait implementation.
+        let sum = self.0.iter()
+            .map(|r| r.duration()
+                .to_std()
+                .expect("Failed to convert duration")
+            ).sum();
+
+        Duration::from_std(sum).expect("Failed to compute duration sum")
+    }
+    fn duration_avg(&self) -> Duration {
+        let sum = self.duration_sum();
+
+        sum / (self.size() as i32)
     }
 }
 
