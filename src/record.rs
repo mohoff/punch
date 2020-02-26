@@ -44,6 +44,19 @@ impl Record {
             (key, r)
         })
     }
+    pub fn display_aligned_with_records(&self, num_records: usize) -> String {
+        let pad_left = num_records.to_string().len();
+
+        format!(
+            "{:0>pad$}: {} {}  {:<33} ({})",
+            self.i.to_string().dimmed(),
+            self.start.to_rfc3339(),
+            "⟶".dimmed(),
+            self.display_end(),
+            self.display_duration().green(),
+            pad = pad_left
+        )
+    }
 }
 
 fn format_duration(d: Duration) -> String {
@@ -57,15 +70,7 @@ fn format_duration(d: Duration) -> String {
 
 impl fmt::Display for Record {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}: {} {}  {:<33} ({})",
-            self.i.to_string().dimmed(),
-            self.start.to_rfc3339(),
-            "⟶".dimmed(),
-            self.display_end(),
-            self.display_duration().green()
-        )
+        writeln!(f, "{}", self.display_aligned_with_records(0))
     }
 }
 
@@ -75,8 +80,9 @@ impl fmt::Display for RecordBucket {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "{}", self.name().bold().underline().to_string())?;
         writeln!(f, "{}", self.stats_formatted())?;
-        for record in self.records_formatted() {
-            writeln!(f, "{}", record)?;
+
+        for record in self.0.iter() {
+            writeln!(f, "{}", record.display_aligned_with_records(self.size()))?;
         }
 
         Ok(())
@@ -131,10 +137,6 @@ impl RecordBucket {
             format_duration(self.duration_sum()).green(),
             format_duration(self.duration_avg()).green()
         )
-    }
-
-    pub fn records_formatted(&self) -> Vec<String> {
-        self.0.iter().map(|r| r.to_string()).collect::<Vec<_>>()
     }
 }
 
