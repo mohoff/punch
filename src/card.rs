@@ -77,7 +77,7 @@ impl Card {
         Card::write_records_to_file(writer, records)
     }
 
-    pub fn display_with(&self, interval: Interval) -> Result<()> {
+    pub fn display_with(&self, interval: Interval, precise: bool) -> Result<()> {
         let mut reader = self.get_reader()?;
 
         let bucket_map = reader.deserialize()
@@ -85,7 +85,7 @@ impl Card {
             .fold(BTreeMap::new(), |mut acc, record: Record| {
                 let key = record.bucket_key(interval);
                 acc.entry(key)
-                    .or_insert(RecordBucket::new(interval))
+                    .or_insert(RecordBucket::new(interval, precise))
                     .add(record);
 
                 acc

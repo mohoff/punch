@@ -7,6 +7,7 @@ mod cli;
 mod cmd;
 mod card;
 mod record;
+mod format;
 mod err;
 
 use std::process;
@@ -36,8 +37,9 @@ fn run() -> Result<()> {
                 show_matches.value_of("interval"),
                 Interval
             ).unwrap_or_else(|e| e.exit());
+            let precise = show_matches.is_present("precise");
 
-            cmd::show::run(interval)
+            cmd::show::run(interval, precise)
         },
         // clap takes care of unmatched subcommands
         _ => unreachable!()

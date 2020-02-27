@@ -3,6 +3,7 @@ use clap::{App, SubCommand, AppSettings, Arg, ArgMatches};
 arg_enum!{
     #[derive(Clone, Copy, Debug)]
     pub enum Interval {
+        Hour,
         Day,
         Week,
         Month,
@@ -37,6 +38,12 @@ pub fn get_matches<'a>() -> ArgMatches<'a> {
                         .case_insensitive(true)
                         .possible_values(&Interval::variants())
                         .default_value("week") // IMPROVE: smth Interval::Week would be cleaner but &str is expected here
+                )
+                .arg(
+                    Arg::with_name("precise")
+                        .short("p")
+                        .long("precise")
+                        .help("Precisely print timestamps in RFC 3339 format (includes milliseconds)")
                 )
         )
         .get_matches()
