@@ -10,6 +10,7 @@ use colored::*;
 use crate::err::*;
 use crate::cli::Interval;
 use crate::record::{Record, RecordBucket};
+use crate::format::{Formatter, FormatRecordOptions};
 
 const CARD_EXT: &'static str = "csv";
 const CARD_NAME_DEFAULT: &'static str = "main";
@@ -30,7 +31,7 @@ impl Card {
             .expect("Could not convert card path to name")
     }
 
-    pub fn punch_in(&self, timestamp: DateTime<Local>) -> Result<()> {
+    pub fn punch_in(&self, timestamp: DateTime<Local>, note: Option<&str>) -> Result<()> {
         let mut reader = self.get_reader()?;
         
         let mut records = reader.deserialize()
@@ -44,14 +45,15 @@ impl Card {
 
         records.push(Record::from((
             timestamp,
-            records.len()
+            records.len(),
+            note.map(String::from),
         )));
 
         let writer = self.get_writer()?;
         Card::write_records_to_file(writer, records)
     }
 
-    pub fn punch_out(&self, timestamp: DateTime<Local>) -> Result<()> {
+    pub fn punch_out(&self, timestamp: DateTime<Local>, note: Option<String>) -> Result<()> {
         let mut reader = self.get_reader()?;
 
         let mut records = reader.deserialize()
@@ -71,6 +73,13 @@ impl Card {
 
         let mut last = last.unwrap();
         last.end.replace(timestamp);
+
+        if let Some(snd) = note {
+            let new_note = last.note
+                .as_ref()
+                .map_or(snd.clone(), |fst| format!("{};{}", fst, snd));
+            last.note.replace(new_note);
+        }
         records.push(last);
 
         let writer = self.get_writer()?;
@@ -80,9 +89,12 @@ impl Card {
     pub fn display_with(&self, interval: Interval, precise: bool) -> Result<()> {
         let mut reader = self.get_reader()?;
 
+        let mut num_total_records = 0;
         let bucket_map = reader.deserialize()
             .filter_map(std::result::Result::ok)
             .fold(BTreeMap::new(), |mut acc, record: Record| {
+                num_total_records += 1;
+        
                 let key = record.bucket_key(interval);
                 acc.entry(key)
                     .or_insert(RecordBucket::new(interval, precise))
@@ -91,9 +103,14 @@ impl Card {
                 acc
             });
 
+        let opts = FormatRecordOptions {
+            align_with_n_records: num_total_records,
+            precise,
+        };
+
         println!("Showing card {}\n", self.name().bold());
         for bucket in bucket_map.values() {
-            println!("{}", bucket);
+            println!("{}", Formatter::format_bucket(bucket, &opts));
         }
 
         Ok(())

@@ -1,6 +1,6 @@
 use std::fmt;
 
-use chrono::{DateTime, Duration, Datelike, Timelike};
+use chrono::{DateTime, Duration, Datelike};
 use chrono::offset::{Local};
 use serde::{Deserialize, Serialize};
 use colored::*;
@@ -27,7 +27,7 @@ impl Record {
     }
     pub fn bucket_key(&self, interval: Interval) -> u32 {
         match interval {
-            Interval::Hour => self.start.naive_utc().hour(),
+            Interval::Hour => (self.start.timestamp() / 3600) as u32,
             Interval::Day => self.start.day(),
             Interval::Week => self.start.iso_week().week(),
             Interval::Month => self.start.month(),
@@ -39,13 +39,13 @@ impl Record {
     }
 }
 
-impl From<(DateTime<Local>, usize)> for Record {
-    fn from((timestamp, num_existing): (DateTime<Local>, usize)) -> Self {
+impl From<(DateTime<Local>, usize, Option<String>)> for Record {
+    fn from((timestamp, num_existing, note): (DateTime<Local>, usize, Option<String>)) -> Self {
         Record {
             i: num_existing,
             start: timestamp,
             end: None,
-            note: None,
+            note,
         }
     }
 }
@@ -56,7 +56,7 @@ impl fmt::Display for Record {
     }
 }
 
-pub struct RecordBucket(Vec<Record>, Interval, bool);
+pub struct RecordBucket(pub Vec<Record>, Interval, bool);
 
 impl fmt::Display for RecordBucket {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -89,10 +89,10 @@ impl RecordBucket {
         match self.1 {
             Interval::Hour => {
                 let next_hour = date.format("%H")
-                .to_string()
-                .parse::<u8>()
-                .expect("Failed to parse hour")
-                + 1 % 24;
+                    .to_string()
+                    .parse::<u8>()
+                    .expect("Failed to parse hour")
+                    + 1 % 24;
                 let next_hour = match next_hour {
                     0 | 1 => format!("{}:00 {}", next_hour, "(next day)".dimmed()),
                     _ => format!("{}:00", next_hour),

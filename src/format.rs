@@ -1,4 +1,4 @@
-use crate::record::Record;
+use crate::record::{Record,RecordBucket};
 
 use chrono::{DateTime, Duration, Local};
 use colored::*;
@@ -12,21 +12,40 @@ pub struct FormatRecordOptions {
 }
 
 impl Formatter {
+    pub fn format_bucket(b: &RecordBucket, opt: &FormatRecordOptions) -> String {
+        let records = b.0.iter()
+            .map(|r| Formatter::format_record(r, &opt))
+            .collect::<Vec<_>>()
+            .join("\n");
+
+        format!(
+            "{}\n{}\n{}\n",
+            b.name().bold().underline().to_string(),
+            b.stats_formatted(),
+            records
+        )
+    }
+
     pub fn format_record(r: &Record, opt: &FormatRecordOptions) -> String {
         let pad_index = opt.align_with_n_records.to_string().len();
         let pad_end = if opt.precise == true { 33 } else { 27 };
 
         let start = Self::format_datetime(&r.start, opt.precise);
         let end = r.end.map_or("ongoing...".to_string(), |date| Self::format_datetime(&date, opt.precise));
-        let duration = Self::format_duration(r.duration()).bright_green();
+        let duration = format!("({})", Self::format_duration(r.duration()).bright_green());
+        let note = match &r.note {
+            Some(n) => n.dimmed().to_string(),
+            None => String::new(),
+        };
 
         format!(
-            "{:0>pad_index$}: {} {}  {:<pad_end$} ({})",
+            "{:0>pad_index$}: {} {}  {:<pad_end$} {:<20} {}",
             r.i.to_string().dimmed(),
             start,
             "⟶".dimmed(),
             end,
             duration,
+            note,
             pad_index = pad_index,
             pad_end = pad_end,
         )

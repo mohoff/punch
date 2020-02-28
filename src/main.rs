@@ -29,8 +29,16 @@ fn run() -> Result<()> {
     let matches = cli::get_matches();
 
     match matches.subcommand() {
-        ("in", _) => cmd::inn::run(),
-        ("out", _) => cmd::out::run(),
+        ("in", Some(in_matches)) => {
+            let note = in_matches.value_of("note");
+            println!("in note {:?}", note);
+            cmd::inn::run(note)
+        },
+        ("out", Some(out_matches)) => {
+            let note = out_matches.value_of("note");
+            println!("out note {:?}", note);
+            cmd::out::run(note)
+        },
         ("show", Some(show_matches)) => {
             // using value_t! to get typed Interval instead of a string
             let interval = value_t!(

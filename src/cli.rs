@@ -12,6 +12,12 @@ arg_enum!{
 }
 
 pub fn get_matches<'a>() -> ArgMatches<'a> {
+    let arg_note = Arg::with_name("note")
+        .help("Attach a note to a punch")
+        .takes_value(true)
+        .empty_values(false)
+        .index(1);
+
     App::new("punch")
         .version(crate_version!())
         .version_short("v")
@@ -23,10 +29,12 @@ pub fn get_matches<'a>() -> ArgMatches<'a> {
         .subcommand(
             SubCommand::with_name("in")
                 .about("Punch in - start tracking time")
+                .arg(&arg_note)
         )
         .subcommand(
             SubCommand::with_name("out")
                 .about("Punch out - stop tracking time")
+                .arg(&arg_note)
         )
         .subcommand(
             SubCommand::with_name("show")
@@ -37,12 +45,12 @@ pub fn get_matches<'a>() -> ArgMatches<'a> {
                         .index(1)
                         .case_insensitive(true)
                         .possible_values(&Interval::variants())
-                        .default_value("week") // IMPROVE: smth Interval::Week would be cleaner but &str is expected here
+                        // IMPROVE: smth Interval::Week would be cleaner but &str is expected here
+                        .default_value("week")
                 )
                 .arg(
                     Arg::with_name("precise")
                         .short("p")
-                        .long("precise")
                         .help("Precisely print timestamps in RFC 3339 format (includes milliseconds)")
                 )
         )

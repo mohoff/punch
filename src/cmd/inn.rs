@@ -3,11 +3,11 @@ use crate::err::*;
 use chrono::{Local};
 use colored::*;
 
-pub fn run() -> Result<()> {
+pub fn run(note: Option<&str>) -> Result<()> {
     let card: Card = Default::default();
 
     let now = Local::now();
-    card.punch_in(now)?;
+    card.punch_in(now, note)?;
 
     print_success(now.to_rfc3339());
 
