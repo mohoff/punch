@@ -23,5 +23,9 @@ Running `punch show day` based on some test data:
 ## Future improvements
 - Support multiple punch cards and allow switching between them. E.g. with `punch list` and `punch switch`.
 - Global stats
+- OS-integration would be sweet: Act on shutdown/start/sleep/opening terminal/Slack.
 - Collect more use-cases. Minute granularity viable?
 - Print table on `punch show`?
+- Use more consistent practises:
+    * error-handling: when is `expect` fine, when `chain_err`, when `map_err`
+    * display structs: fmt::Display does not accept params, so either Formatter module or `.display_with()` can be used.
