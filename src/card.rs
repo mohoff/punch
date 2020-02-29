@@ -1,4 +1,4 @@
-use std::fs::{self, File};
+use std::fs::{self, File, OpenOptions};
 use std::path::PathBuf;
 use std::collections::BTreeMap;
 
@@ -20,6 +20,13 @@ pub struct Card(PathBuf);
 
 impl Card {
     fn new(path: PathBuf) -> Result<Self> {
+        // Assumes that the directory already exists
+        OpenOptions::new()
+            .write(true)
+            .create(true)
+            .open(&path)
+            .chain_err(|| "Failed to create card file")?;
+
         Ok(Card(path))
     }
 
