@@ -143,18 +143,14 @@ impl Card {
 
 impl Default for Card {
     fn default() -> Self {
-        let home_dir = dirs::home_dir()
-            .expect("Failed to get home dir");
-        dbg!(&home_dir);
+        let home_dir = dirs::home_dir().expect("Failed to get home dir");
 
         let dir = home_dir.join(CARD_DIR);
-        dbg!(&dir);
 
         fs::create_dir_all(&dir).expect("Could not create directory to store punch cards");
 
         let mut card_path = dir.join(CARD_NAME_DEFAULT);
         card_path.set_extension(CARD_EXT);
-        dbg!(&card_path);
 
         Card::new(card_path).expect("Failed to create default punch card")
     }

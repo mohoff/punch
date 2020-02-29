@@ -31,12 +31,10 @@ fn run() -> Result<()> {
     match matches.subcommand() {
         ("in", Some(in_matches)) => {
             let note = in_matches.value_of("note");
-            println!("in note {:?}", note);
             cmd::inn::run(note)
         },
         ("out", Some(out_matches)) => {
             let note = out_matches.value_of("note");
-            println!("out note {:?}", note);
             cmd::out::run(note)
         },
         ("show", Some(show_matches)) => {
