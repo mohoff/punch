@@ -110,14 +110,20 @@ impl Card {
                 acc
             });
 
-        let opts = FormatRecordOptions {
-            align_with_n_records: num_total_records,
-            precise,
-        };
-
         println!("Showing card {}\n", self.name().bold());
-        for bucket in bucket_map.values() {
-            println!("{}", Formatter::format_bucket(bucket, &opts));
+
+        match num_total_records {
+            0 => println!("{}\n", "no punches yet".italic().dimmed()),
+            n => {
+                let opts = FormatRecordOptions {
+                    align_with_n_records: n,
+                    precise,
+                };
+        
+                for bucket in bucket_map.values() {
+                    println!("{}", Formatter::format_bucket(bucket, &opts));
+                }
+            }
         }
 
         Ok(())
