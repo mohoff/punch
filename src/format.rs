@@ -1,4 +1,5 @@
 use crate::record::{Record,RecordBucket};
+use crate::round::Rounding;
 
 use chrono::{DateTime, Duration, Local};
 use colored::*;
@@ -9,6 +10,7 @@ pub struct Formatter;
 pub struct FormatRecordOptions {
     pub align_with_n_records: usize,
     pub precise: bool,
+    pub rounding: Option<Rounding>,
 }
 
 impl Formatter {
@@ -21,7 +23,7 @@ impl Formatter {
         format!(
             "{}\n{}\n{}\n",
             b.name().bold().underline().to_string(),
-            b.stats_formatted(),
+            b.stats_formatted(&opt),
             records
         )
     }
@@ -32,7 +34,12 @@ impl Formatter {
 
         let start = Self::format_datetime(&r.start, opt.precise);
         let end = r.end.map_or("ongoing...".to_string(), |date| Self::format_datetime(&date, opt.precise));
-        let duration = format!("({})", Self::format_duration(r.duration()).bright_green());
+
+        let duration = match &opt.rounding {
+            Some(rounding) => rounding.round_duration(&r.duration()),
+            None => r.duration(),
+        };
+        let duration = format!("({})", Self::format_duration(duration).bright_green());
         let note = match &r.note {
             Some(n) => n.dimmed().to_string(),
             None => String::new(),

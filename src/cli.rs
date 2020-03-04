@@ -1,13 +1,32 @@
+use std::convert::TryFrom;
+
 use clap::{App, SubCommand, AppSettings, Arg, ArgMatches};
+
+use crate::err::*;
 
 arg_enum!{
     #[derive(Clone, Copy, Debug)]
     pub enum Interval {
+        Minute,
         Hour,
         Day,
         Week,
         Month,
         Year,
+    }
+}
+
+impl TryFrom<&str> for Interval {
+    type Error = Error;
+    
+    fn try_from(string: &str) -> Result<Self> {
+        match string {
+            "min" | "m" => Ok(Interval::Minute),
+            "hour" | "h" => Ok(Interval::Hour),
+            "day" | "d" => Ok(Interval::Day),
+            "week" | "w" => Ok(Interval::Week),
+            _ => Err(ErrorKind::InvalidTimeInterval.into()),
+        }
     }
 }
 
@@ -52,6 +71,12 @@ pub fn get_matches<'a>() -> ArgMatches<'a> {
                     Arg::with_name("precise")
                         .short("p")
                         .help("Precisely print timestamps in RFC 3339 format (includes milliseconds)")
+                )
+                .arg(
+                    Arg::with_name("rounding")
+                        .short("r")
+                        .takes_value(true)
+                        .help("Rounding string to specify rounding options for time durations")
                 )
         )
         .get_matches()

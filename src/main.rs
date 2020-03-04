@@ -9,11 +9,14 @@ mod card;
 mod record;
 mod format;
 mod err;
+mod round;
 
 use std::process;
+use std::convert::TryFrom;
 
-use err::*;
 use cli::Interval;
+use round::Rounding;
+use err::*;
 
 fn main() {
     match run() {
@@ -44,8 +47,13 @@ fn run() -> Result<()> {
                 Interval
             ).unwrap_or_else(|e| e.exit());
             let precise = show_matches.is_present("precise");
+            // Use match instead of Option::map to allow use of ? operator
+            let rounding = match show_matches.value_of("rounding") {
+                Some(value) => Some(Rounding::try_from(value)?),
+                None => None,
+            };
 
-            cmd::show::run(interval, precise)
+            cmd::show::run(interval, precise, rounding)
         },
         // clap takes care of unmatched subcommands
         _ => unreachable!()

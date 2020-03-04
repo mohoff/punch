@@ -11,6 +11,7 @@ use crate::err::*;
 use crate::cli::Interval;
 use crate::record::{Record, RecordBucket};
 use crate::format::{Formatter, FormatRecordOptions};
+use crate::round::Rounding;
 
 const CARD_EXT: &'static str = "csv";
 const CARD_NAME_DEFAULT: &'static str = "main";
@@ -93,7 +94,7 @@ impl Card {
         Card::write_records_to_file(writer, records)
     }
 
-    pub fn display_with(&self, interval: Interval, precise: bool) -> Result<()> {
+    pub fn display_with(&self, interval: Interval, precise: bool, rounding: Option<Rounding>) -> Result<()> {
         let mut reader = self.get_reader()?;
 
         let mut num_total_records = 0;
@@ -118,6 +119,7 @@ impl Card {
                 let opts = FormatRecordOptions {
                     align_with_n_records: n,
                     precise,
+                    rounding,
                 };
         
                 for bucket in bucket_map.values() {

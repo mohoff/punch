@@ -26,6 +26,12 @@ error_chain! {
         IncorrectCardStateForOut {
             display("Cannot punch out. Did you punch in before?"),
         }
+        InvalidTimeInterval {
+            display("Failed to parse time interval"),
+        }
+        InvalidRoundingDirection {
+            display("Failed to parse rounding direction"),
+        }
     }
 }
 

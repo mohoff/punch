@@ -27,6 +27,7 @@ impl Record {
     }
     pub fn bucket_key(&self, interval: Interval) -> u32 {
         match interval {
+            Interval::Minute => (self.start.timestamp() / 60) as u32,
             Interval::Hour => (self.start.timestamp() / 3600) as u32,
             Interval::Day => self.start.day(),
             Interval::Week => self.start.iso_week().week(),
@@ -60,13 +61,14 @@ pub struct RecordBucket(pub Vec<Record>, Interval, bool);
 
 impl fmt::Display for RecordBucket {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "{}", self.name().bold().underline().to_string())?;
-        writeln!(f, "{}", self.stats_formatted())?;
-
         let opts = FormatRecordOptions {
             align_with_n_records: self.size(),
             precise: self.2,
+            rounding: None,
         };
+
+        writeln!(f, "{}", self.name().bold().underline().to_string())?;
+        writeln!(f, "{}", self.stats_formatted(&opts))?;
 
         for record in self.0.iter() {
             writeln!(f, "{}", Formatter::format_record(record, &opts))?;
@@ -87,21 +89,21 @@ impl RecordBucket {
         let date = (self.0)[0].start;
 
         match self.1 {
-            Interval::Hour => {
-                let next_hour = date.format("%H")
-                    .to_string()
-                    .parse::<u8>()
-                    .expect("Failed to parse hour")
-                    + 1 % 24;
-                let next_hour = match next_hour {
-                    0 | 1 => format!("{}:00 {}", next_hour, "(next day)".dimmed()),
-                    _ => format!("{}:00", next_hour),
-                };
+            Interval::Minute => {
+                let next_date = date.checked_add_signed(Duration::minutes(1)).unwrap();
+                
+                let fst = date.format("%F (%A), %H:%M-");
+                let snd = next_date.format("%H:%M (%Z)");
 
-                let prefix = date.format("%F (%A), %H:00-");
-                let suffix = date.format(" (%Z)");
+                format!("{}{}", fst, snd)
+            },
+            Interval::Hour => {
+                let next_date = date.checked_add_signed(Duration::hours(1)).unwrap();
+
+                let fst = date.format("%F (%A), %H:00-");
+                let snd = next_date.format("%H:00 (%Z)");
             
-                format!("{}{}{}", prefix, next_hour, suffix)
+                format!("{}{}", fst, snd)
             },
             Interval::Day => date.format("%F (%A)").to_string(),
             Interval::Week => date.format("CW %U (%B %Y)").to_string(),
@@ -109,15 +111,49 @@ impl RecordBucket {
             Interval::Year => date.format("%Y").to_string(),
         }
     }
-    pub fn stats_formatted(&self) -> String {
+    pub fn stats_formatted(&self, opt: &FormatRecordOptions) -> String {
         let num_punches = self.size().to_string().bright_green();
-        let sum = Formatter::format_duration(self.duration_sum()).bright_green();
-        let avg = Formatter::format_duration(self.duration_avg()).bright_green();
-    
-        format!("{} ⏺️  - sum: {}, avg: {}", num_punches, sum, avg)
+
+        let sum = self.duration_sum();
+        let avg = self.duration_avg();
+
+        match opt.rounding {
+            Some(ref rounding) => {
+                let rounded_sum = opt.rounding.as_ref().unwrap().round_duration(&sum);
+                let sum_of_rounded = self.rounded_duration_sum(&opt);
+
+                format!(
+                    "{} ⏺️  - sum: {}, rounded sum: {}, sum of rounded: {}, avg: {}",
+                    num_punches,
+                    Formatter::format_duration(sum).bright_green(),
+                    Formatter::format_duration(rounded_sum).bright_green(),
+                    Formatter::format_duration(sum_of_rounded).bright_green(),
+                    Formatter::format_duration(avg).bright_green(),
+                )
+            },
+            None => {
+                format!(
+                    "{} ⏺️  - sum: {}, avg: {}",
+                    num_punches,
+                    Formatter::format_duration(sum).bright_green(),
+                    Formatter::format_duration(avg).bright_green(),
+                )
+            }
+        }
+        
     }
     fn size(&self) -> usize {
         self.0.len()
+    }
+    fn rounded_duration_sum(&self, opt: &FormatRecordOptions) -> Duration {
+        // Map to std::time::Duration and make use of its Sum trait implementation.
+        let sum = self.0.iter()
+            .map(|r| opt.rounding.as_ref().unwrap().round_duration(&r.duration())
+                .to_std()
+                .expect("Failed to convert duration")
+            ).sum();
+
+        Duration::from_std(sum).expect("Failed to compute duration sum")
     }
     fn duration_sum(&self) -> Duration {
         // Map to std::time::Duration and make use of its Sum trait implementation.
