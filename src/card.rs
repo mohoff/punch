@@ -9,7 +9,8 @@ use colored::*;
 
 use crate::err::*;
 use crate::cli::Interval;
-use crate::record::{Record, RecordBucket};
+use crate::record::Record;
+use crate::bucket::RecordBucket;
 use crate::format::{Formatter, FormatRecordOptions};
 use crate::round::Rounding;
 

@@ -10,6 +10,7 @@ mod record;
 mod format;
 mod err;
 mod round;
+mod bucket;
 
 use std::process;
 use std::convert::TryFrom;

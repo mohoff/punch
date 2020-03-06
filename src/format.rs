@@ -1,4 +1,5 @@
-use crate::record::{Record,RecordBucket};
+use crate::record::Record;
+use crate::bucket::RecordBucket;
 use crate::round::Rounding;
 
 use chrono::{DateTime, Duration, Local};
