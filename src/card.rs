@@ -1,22 +1,22 @@
+use std::collections::BTreeMap;
 use std::fs::{self, File, OpenOptions};
 use std::path::PathBuf;
-use std::collections::BTreeMap;
 
-use ::csv::{Reader, ReaderBuilder, WriterBuilder, Writer};
+use ::csv::{Reader, ReaderBuilder, Writer, WriterBuilder};
 use chrono::{DateTime, Local};
-use dirs;
 use colored::*;
+use dirs;
 
-use crate::err::*;
-use crate::cli::Interval;
-use crate::record::Record;
 use crate::bucket::RecordBucket;
-use crate::format::{Formatter, FormatRecordOptions};
-use crate::round::Rounding;
+use crate::cli::Interval;
+use crate::err::*;
+use crate::format::{FormatRecordOptions, Formatter};
+use crate::record::Record;
+use crate::round::RoundingOptions;
 
-const CARD_EXT: &'static str = "csv";
-const CARD_NAME_DEFAULT: &'static str = "main";
-const CARD_DIR: &'static str = ".punch";
+const CARD_EXT: &str = "csv";
+const CARD_NAME_DEFAULT: &str = "main";
+const CARD_DIR: &str = ".punch";
 
 pub struct Card(PathBuf);
 
@@ -34,7 +34,8 @@ impl Card {
 
     #[allow(dead_code)]
     fn name(&self) -> &str {
-        self.0.file_stem()
+        self.0
+            .file_stem()
             .expect("Could not get card name")
             .to_str()
             .expect("Could not convert card path to name")
@@ -42,13 +43,14 @@ impl Card {
 
     pub fn punch_in(&self, timestamp: DateTime<Local>, note: Option<&str>) -> Result<()> {
         let mut reader = self.get_reader()?;
-        
-        let mut records = reader.deserialize()
+
+        let mut records = reader
+            .deserialize()
             .filter_map(std::result::Result::ok)
             .collect::<Vec<Record>>();
 
         // Check if all existing records have an end date
-        if records.iter().all(|r| r.is_terminated()) == false {
+        if !records.iter().all(|r| r.is_terminated()) {
             return Err(ErrorKind::IncorrectCardStateForIn.into());
         }
 
@@ -65,7 +67,8 @@ impl Card {
     pub fn punch_out(&self, timestamp: DateTime<Local>, note: Option<String>) -> Result<()> {
         let mut reader = self.get_reader()?;
 
-        let mut records = reader.deserialize()
+        let mut records = reader
+            .deserialize()
             .filter_map(std::result::Result::ok)
             .collect::<Vec<Record>>();
 
@@ -73,7 +76,7 @@ impl Card {
 
         // Check that all 0..n-1 records have an end
         // date and that record n can be terminated.
-        if records.iter().all(|r| r.is_terminated()) == false
+        if !records.iter().all(|r| r.is_terminated())
             || last.is_none()
             || last.as_ref().unwrap().end.is_some()
         {
@@ -84,7 +87,8 @@ impl Card {
         last.end.replace(timestamp);
 
         if let Some(snd) = note {
-            let new_note = last.note
+            let new_note = last
+                .note
                 .as_ref()
                 .map_or(snd.clone(), |fst| format!("{};{}", fst, snd));
             last.note.replace(new_note);
@@ -95,16 +99,23 @@ impl Card {
         Card::write_records_to_file(writer, records)
     }
 
-    pub fn display_with(&self, interval: Interval, precise: bool, rounding: Option<Rounding>) -> Result<()> {
+    pub fn display_with(
+        &self,
+        interval: Interval,
+        precise: bool,
+        rounding: RoundingOptions,
+    ) -> Result<()> {
         let mut reader = self.get_reader()?;
 
         let mut num_total_records = 0;
-        let bucket_map = reader.deserialize()
+        let bucket_map = reader
+            .deserialize()
             .filter_map(std::result::Result::ok)
             .fold(BTreeMap::new(), |mut acc, record: Record| {
                 num_total_records += 1;
-        
                 let key = record.bucket_key(interval);
+
+                #[allow(clippy::or_fun_call)]
                 acc.entry(key)
                     .or_insert(RecordBucket::new(interval, precise))
                     .add(record);
@@ -122,7 +133,7 @@ impl Card {
                     precise,
                     rounding,
                 };
-        
+
                 for bucket in bucket_map.values() {
                     println!("{}", Formatter::format_bucket(bucket, &opts));
                 }

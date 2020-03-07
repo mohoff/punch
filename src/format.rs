@@ -1,8 +1,8 @@
-use crate::record::Record;
 use crate::bucket::RecordBucket;
-use crate::round::Rounding;
+use crate::record::Record;
+use crate::round::RoundingOptions;
 
-use chrono::{DateTime, Duration, Local};
+use chrono::{DateTime, Local};
 use colored::*;
 
 pub struct Formatter;
@@ -11,15 +11,16 @@ pub struct Formatter;
 pub struct FormatRecordOptions {
     pub align_with_n_records: usize,
     pub precise: bool,
-    pub rounding: Option<Rounding>,
+    pub rounding: RoundingOptions,
 }
 
 impl Formatter {
     pub fn format_bucket(b: &RecordBucket, opt: &FormatRecordOptions) -> String {
-        let records = b.0.iter()
-            .map(|r| Formatter::format_record(r, &opt))
-            .collect::<Vec<_>>()
-            .join("\n");
+        let records =
+            b.0.iter()
+                .map(|r| Formatter::format_record(r, &opt))
+                .collect::<Vec<_>>()
+                .join("\n");
 
         format!(
             "{}\n{}\n{}\n",
@@ -31,16 +32,16 @@ impl Formatter {
 
     pub fn format_record(r: &Record, opt: &FormatRecordOptions) -> String {
         let pad_index = opt.align_with_n_records.to_string().len();
-        let pad_end = if opt.precise == true { 33 } else { 27 };
+        let pad_end = if opt.precise { 33 } else { 27 };
 
         let start = Self::format_datetime(&r.start, opt.precise);
-        let end = r.end.map_or("ongoing...".to_string(), |date| Self::format_datetime(&date, opt.precise));
+        let end = r.end.map_or("ongoing...".to_string(), |date| {
+            Self::format_datetime(&date, opt.precise)
+        });
 
-        let duration = match &opt.rounding {
-            Some(rounding) => rounding.round_duration(&r.duration()),
-            None => r.duration(),
-        };
-        let duration = format!("({})", Self::format_duration(duration).bright_green());
+        let duration = r.duration().round(&opt.rounding);
+
+        let duration = format!("({})", duration.format().bright_green());
         let note = match &r.note {
             Some(n) => n.dimmed().to_string(),
             None => String::new(),
@@ -59,20 +60,11 @@ impl Formatter {
         )
     }
 
-    pub fn format_duration(d: Duration) -> String {
-        // no built-in duration formatting available
-        let h = d.num_hours();
-        let min = d.num_minutes() - h * 60;
-        let sec = d.num_seconds() - h * 3600 - min * 60;
-    
-        format!("{:0>#2}:{:0>#2}:{:0>#2}", h, min, sec)
-    }
-
     fn format_datetime(dt: &DateTime<Local>, precise: bool) -> String {
-        match precise {
-            true => dt.to_rfc3339(),
-            false => dt.format("%F %T %Z").to_string(),
+        if precise {
+            dt.to_rfc3339()
+        } else {
+            dt.format("%F %T %Z").to_string()
         }
     }
 }
-

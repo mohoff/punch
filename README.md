@@ -8,7 +8,9 @@ A simple time-tracking CLI tool written in Rust. Punch in, punch out, and pretty
 
 - **`punch in [<note>]`**: Start tracking time and pass an optional note.
 - **`punch out [<note>]`**: Stop tracking time and pass an optional note.
-- **`punch show [day|week|month|year] [--precise]`**: Print tracked times and notes grouped by the specified time interval to console. (default: `week`). The `--precise` flag prints timestamps in RFC 3339 format.
+- **`punch show [day|week|month|year] [--precise] [--round ROUNDING]`**: Print tracked times and notes grouped by the specified time interval to console. (default: `week`).
+    - `--precise/-p`: prints timestamps in RFC 3339 format.
+    - `--round/-r ROUNDING`: rounds durations according to the specified options in `ROUNDING`. Examples: `up,15min`, `down,1h`, `nearest,1day`.
 
 Each `punch in` must be followed by a `punch out`. You can't `punch in` if you haven't `punch out`d the previous record. The tool performs some validation on each punch and reports invalid state.
 

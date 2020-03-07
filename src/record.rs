@@ -1,10 +1,11 @@
 use std::fmt;
 
-use chrono::{DateTime, Duration, Datelike};
-use chrono::offset::{Local};
+use chrono::offset::Local;
+use chrono::{DateTime, Datelike};
 use serde::{Deserialize, Serialize};
 
 use crate::cli::Interval;
+use crate::duration::Duration;
 use crate::format::Formatter;
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -19,7 +20,7 @@ pub struct Record {
 
 impl Record {
     pub fn duration(&self) -> Duration {
-        self.end().signed_duration_since(self.start)
+        Duration::of_record(self)
     }
     pub fn is_terminated(&self) -> bool {
         self.end.is_some() && self.start <= self.end.unwrap()
@@ -33,9 +34,6 @@ impl Record {
             Interval::Month => self.start.month(),
             Interval::Year => self.start.year() as u32,
         }
-    }
-    fn end(&self) -> DateTime<Local> {
-        self.end.unwrap_or(Local::now())
     }
 }
 
@@ -52,6 +50,10 @@ impl From<(DateTime<Local>, usize, Option<String>)> for Record {
 
 impl fmt::Display for Record {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", Formatter::format_record(&self, &Default::default()))
+        write!(
+            f,
+            "{}",
+            Formatter::format_record(&self, &Default::default())
+        )
     }
 }

@@ -1,10 +1,10 @@
 use std::convert::TryFrom;
 
-use clap::{App, SubCommand, AppSettings, Arg, ArgMatches};
+use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
 
 use crate::err::*;
 
-arg_enum!{
+arg_enum! {
     #[derive(Clone, Copy, Debug)]
     pub enum Interval {
         Minute,
@@ -18,7 +18,7 @@ arg_enum!{
 
 impl TryFrom<&str> for Interval {
     type Error = Error;
-    
+
     fn try_from(string: &str) -> Result<Self> {
         match string {
             "min" | "m" => Ok(Interval::Minute),
@@ -43,17 +43,17 @@ pub fn get_matches<'a>() -> ArgMatches<'a> {
         .author("Moritz Hoffmann <mohoff@web.de>")
         .settings(&[
             AppSettings::SubcommandRequiredElseHelp,
-            AppSettings::GlobalVersion
+            AppSettings::GlobalVersion,
         ])
         .subcommand(
             SubCommand::with_name("in")
                 .about("Punch in - start tracking time")
-                .arg(&arg_note)
+                .arg(&arg_note),
         )
         .subcommand(
             SubCommand::with_name("out")
                 .about("Punch out - stop tracking time")
-                .arg(&arg_note)
+                .arg(&arg_note),
         )
         .subcommand(
             SubCommand::with_name("show")
@@ -64,20 +64,20 @@ pub fn get_matches<'a>() -> ArgMatches<'a> {
                         .index(1)
                         .case_insensitive(true)
                         .possible_values(&Interval::variants())
-                        // IMPROVE: smth Interval::Week would be cleaner but &str is expected here
-                        .default_value("week")
+                        // IMPROVE: smth Interval::Week would be cleaner but &str is required by clap
+                        .default_value("week"),
                 )
                 .arg(
-                    Arg::with_name("precise")
-                        .short("p")
-                        .help("Precisely print timestamps in RFC 3339 format (includes milliseconds)")
+                    Arg::with_name("precise").short("p").help(
+                        "Precisely print timestamps in RFC 3339 format (includes milliseconds)",
+                    ),
                 )
                 .arg(
                     Arg::with_name("rounding")
                         .short("r")
                         .takes_value(true)
-                        .help("Rounding string to specify rounding options for time durations")
-                )
+                        .help("Rounding string to specify rounding options for time durations"),
+                ),
         )
         .get_matches()
 }
