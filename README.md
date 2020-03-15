@@ -8,9 +8,10 @@ A simple time-tracking CLI tool written in Rust. Punch in, punch out, and pretty
 
 - **`punch in [<note>]`**: Start tracking time and pass an optional note.
 - **`punch out [<note>]`**: Stop tracking time and pass an optional note.
-- **`punch show [day|week|month|year] [--precise] [--round ROUNDING]`**: Print tracked times and notes grouped by the specified time interval to console. (default: `week`).
+- **`punch show [day|week|month|year] [--precise] [--round DIRECTION,GRANULARITY]`**: Print tracked times and notes grouped by the specified time interval to console. (default: `week`).
     - `--precise/-p`: prints timestamps in RFC 3339 format.
-    - `--round/-r ROUNDING`: rounds durations according to the specified options in `ROUNDING`. Examples: `up,15min`, `down,1h`, `nearest,1day`.
+    - `--timezone/-t`: prints timestamps with timezone.
+    - `--round/-r DIRECTION,GRANULARITY`: rounds durations according to the given rounding direction and granularity. Examples: `nearest,1min` (default), `up,30min`, `down,1h`, `n,1day`.
 
 Each `punch in` must be followed by a `punch out`. You can't `punch in` if you haven't `punch out`d the previous record. The tool performs some validation on each punch and reports invalid state.
 
@@ -24,10 +25,7 @@ Running `punch show day` based on some test data:
 
 ## Future improvements
 - Support multiple punch cards and allow switching between them. E.g. with `punch list` and `punch switch`.
-- Global stats
+- Tests
+- Switch showing stats with `punch show --stats`
 - OS-integration would be sweet: Act on shutdown/start/sleep/opening terminal/Slack.
-- Collect more use-cases. Minute granularity viable?
 - Print table on `punch show`?
-- Use more consistent practises:
-    * error-handling: when is `expect` fine, when `chain_err`, when `map_err`
-    * display structs: fmt::Display does not accept params, so either Formatter module or `.display_with()` can be used.
