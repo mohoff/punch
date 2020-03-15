@@ -7,18 +7,19 @@ mod bucket;
 mod card;
 mod cli;
 mod cmd;
-mod duration;
 mod err;
 mod format;
 mod record;
 mod round;
+mod time;
 
 use std::convert::TryFrom;
 use std::process;
 
-use cli::Interval;
 use err::*;
+use format::{CardFormattingOptions, RecordFormattingOptions};
 use round::RoundingOptions;
+use time::Interval;
 
 fn main() {
     match run() {
@@ -47,13 +48,22 @@ fn run() -> Result<()> {
             let interval =
                 value_t!(show_matches.value_of("interval"), Interval).unwrap_or_else(|e| e.exit());
             let precise = show_matches.is_present("precise");
-            // Use match instead of Option::map to allow use of ? operator
-            let rounding = match show_matches.value_of("rounding") {
-                Some(value) => RoundingOptions::try_from(value)?,
-                None => RoundingOptions::default(),
+            let timezone = show_matches.is_present("timezone");
+            let rounding = show_matches
+                .value_of("rounding")
+                .map_or(Ok(Default::default()), RoundingOptions::try_from)?;
+
+            let opts = CardFormattingOptions {
+                interval,
+                record_opts: RecordFormattingOptions {
+                    rounding_opts: rounding,
+                    precise,
+                    timezone,
+                    ..Default::default()
+                },
             };
 
-            cmd::show::run(interval, precise, rounding)
+            cmd::show::run(opts)
         }
         // clap takes care of unmatched subcommands
         _ => unreachable!(),

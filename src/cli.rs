@@ -1,34 +1,6 @@
-use std::convert::TryFrom;
-
+use crate::round::RoundingOptions;
+use crate::time::Interval;
 use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
-
-use crate::err::*;
-
-arg_enum! {
-    #[derive(Clone, Copy, Debug)]
-    pub enum Interval {
-        Minute,
-        Hour,
-        Day,
-        Week,
-        Month,
-        Year,
-    }
-}
-
-impl TryFrom<&str> for Interval {
-    type Error = Error;
-
-    fn try_from(string: &str) -> Result<Self> {
-        match string {
-            "min" | "m" => Ok(Interval::Minute),
-            "hour" | "h" => Ok(Interval::Hour),
-            "day" | "d" => Ok(Interval::Day),
-            "week" | "w" => Ok(Interval::Week),
-            _ => Err(ErrorKind::InvalidTimeInterval.into()),
-        }
-    }
-}
 
 pub fn get_matches<'a>() -> ArgMatches<'a> {
     let arg_note = Arg::with_name("note")
@@ -37,10 +9,11 @@ pub fn get_matches<'a>() -> ArgMatches<'a> {
         .empty_values(false)
         .index(1);
 
+    #[allow(deprecated)]
     App::new("punch")
+        .author(crate_authors!("\n"))
         .version(crate_version!())
         .version_short("v")
-        .author("Moritz Hoffmann <mohoff@web.de>")
         .settings(&[
             AppSettings::SubcommandRequiredElseHelp,
             AppSettings::GlobalVersion,
@@ -64,19 +37,29 @@ pub fn get_matches<'a>() -> ArgMatches<'a> {
                         .index(1)
                         .case_insensitive(true)
                         .possible_values(&Interval::variants())
-                        // IMPROVE: smth Interval::Week would be cleaner but &str is required by clap
+                        // IMPROVE: passing Interval::Week here is favorable but clap requires a &str
                         .default_value("week"),
                 )
                 .arg(
-                    Arg::with_name("precise").short("p").help(
-                        "Precisely print timestamps in RFC 3339 format (includes milliseconds)",
+                    Arg::with_name("precise").long("precise").short("p").help(
+                        "Print timestamps precisely in RFC 3339 format (includes milliseconds)",
                     ),
                 )
                 .arg(
+                    Arg::with_name("timezone")
+                        .long("timezone")
+                        .short("t")
+                        .help("Print timestamps with timezones"),
+                )
+                .arg(
+                    // A default value of "nearest,1min" is implemented through the Default trait instead of clap::Arg::default_value
                     Arg::with_name("rounding")
+                        .long("round")
                         .short("r")
                         .takes_value(true)
-                        .help("Rounding string to specify rounding options for time durations"),
+                        .value_name("DIRECTION,GRANULARITY")
+                        .validator(RoundingOptions::validate_str)
+                        .help("Rounding string in format <DIRECTION,GRANULARITY> to specify rounding options for time durations. For example: nearest,1min (default); up,5min; down,1day")
                 ),
         )
         .get_matches()

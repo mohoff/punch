@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
-use crate::cli::Interval;
 use crate::err::*;
+use crate::time::Interval;
 
 #[derive(Debug)]
 pub enum RoundingDirection {
@@ -23,16 +23,16 @@ impl TryFrom<&str> for RoundingDirection {
     }
 }
 
-#[derive(Debug)]
-pub struct RoundingGranularityInMinutes(pub usize);
+#[derive(Debug, PartialEq, PartialOrd)]
+pub struct RoundingGranularityInSeconds(pub usize);
 
-impl Default for RoundingGranularityInMinutes {
+impl Default for RoundingGranularityInSeconds {
     fn default() -> Self {
-        RoundingGranularityInMinutes(0)
+        RoundingGranularityInSeconds(60)
     }
 }
 
-impl TryFrom<&str> for RoundingGranularityInMinutes {
+impl TryFrom<&str> for RoundingGranularityInSeconds {
     type Error = Error;
 
     fn try_from(string: &str) -> Result<Self> {
@@ -44,21 +44,22 @@ impl TryFrom<&str> for RoundingGranularityInMinutes {
         let interval = Interval::try_from(interval.as_str())?;
 
         let mins = match interval {
-            Interval::Minute => amount,
-            Interval::Hour => amount * 60,
-            Interval::Day => amount * 60 * 24,
-            Interval::Week => amount * 60 * 24 * 7,
+            Interval::Second => amount,
+            Interval::Minute => amount * 60,
+            Interval::Hour => amount * 3600,
+            Interval::Day => amount * 3600 * 24,
+            Interval::Week => amount * 3600 * 24 * 7,
             _ => return Err(ErrorKind::InvalidTimeInterval.into()),
         };
 
-        Ok(RoundingGranularityInMinutes(mins))
+        Ok(RoundingGranularityInSeconds(mins))
     }
 }
 
 #[derive(Debug)]
 pub struct RoundingOptions {
     pub direction: RoundingDirection,
-    pub granularity: RoundingGranularityInMinutes,
+    pub granularity: RoundingGranularityInSeconds,
 }
 
 impl Default for RoundingOptions {
@@ -82,7 +83,33 @@ impl TryFrom<&str> for RoundingOptions {
 
         Ok(RoundingOptions {
             direction: RoundingDirection::try_from(elements[0])?,
-            granularity: RoundingGranularityInMinutes::try_from(elements[1])?,
+            granularity: RoundingGranularityInSeconds::try_from(elements[1])?,
         })
+    }
+}
+
+impl RoundingOptions {
+    // This is a utility for clap::Arg::validator used in cli.rs
+    pub fn validate_str(input: String) -> std::result::Result<(), String> {
+        let elements = input.split(',').collect::<Vec<_>>();
+
+        if elements.len() != 2 {
+            return Err(format!(
+                "Failed to parse <ROUNDING> argument {:?}. Expected <ROUNDING> to be of form '<DIRECTION>,<INTERVAL>'. For example: up,5min", elements
+            ));
+        }
+
+        let _ = RoundingOptions {
+            direction: RoundingDirection::try_from(elements[0])
+                .map_err(|_|
+                    format!("Failed to parse rounding DIRECTION {:?}. Expected one of the following: \"nearest\" (\"n\"), \"up\" (\"u\"), or \"down\" (\"d\")", elements[0])
+                )?,
+            granularity: RoundingGranularityInSeconds::try_from(elements[1])
+                .map_err(|_|
+                    format!("Failed to parse rounding GRANULARITY {:?}. Expected a time specification like \"5min\", \"1h\", \"3days\", etc.", elements[1])
+                )?,
+        };
+
+        Ok(())
     }
 }

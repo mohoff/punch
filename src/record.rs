@@ -1,19 +1,17 @@
 use std::fmt;
 
-use chrono::offset::Local;
-use chrono::{DateTime, Datelike};
+use colored::*;
 use serde::{Deserialize, Serialize};
 
-use crate::cli::Interval;
-use crate::duration::Duration;
-use crate::format::Formatter;
+use crate::format::RecordFormattingOptions;
+use crate::time::{Duration, Interval, Timestamp};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Record {
     pub i: usize,
-    pub start: DateTime<Local>,
+    pub start: Timestamp,
     #[serde(default)]
-    pub end: Option<DateTime<Local>>,
+    pub end: Option<Timestamp>,
     #[serde(default)]
     pub note: Option<String>,
 }
@@ -26,19 +24,43 @@ impl Record {
         self.end.is_some() && self.start <= self.end.unwrap()
     }
     pub fn bucket_key(&self, interval: Interval) -> u32 {
-        match interval {
-            Interval::Minute => (self.start.timestamp() / 60) as u32,
-            Interval::Hour => (self.start.timestamp() / 3600) as u32,
-            Interval::Day => self.start.day(),
-            Interval::Week => self.start.iso_week().week(),
-            Interval::Month => self.start.month(),
-            Interval::Year => self.start.year() as u32,
-        }
+        self.start.floor_to_interval_units(interval)
+    }
+    pub fn format_with(&self, opt: &RecordFormattingOptions) -> String {
+        let pad_index = opt.align_with_n_records.to_string().len();
+        let pad_end = match (opt.precise, opt.timezone) {
+            (true, _) => 33,
+            (_, true) => 26,
+            (_, false) => 20,
+        };
+
+        let start = self.start.format_with(opt);
+        let end = (self.end).map_or("ongoing...".to_string(), |date| date.format_with(opt));
+
+        let duration = self.duration().round(&opt.rounding_opts);
+
+        let duration = format!("({})", duration.format(&opt.rounding_opts).bright_green());
+        let note = match &self.note {
+            Some(n) => n.dimmed().to_string(),
+            None => String::new(),
+        };
+
+        format!(
+            "{:0>pad_index$}: {} {}  {:<pad_end$} {:<20} {}",
+            self.i.to_string().dimmed(),
+            start,
+            "⟶".dimmed(),
+            end,
+            duration,
+            note,
+            pad_index = pad_index,
+            pad_end = pad_end,
+        )
     }
 }
 
-impl From<(DateTime<Local>, usize, Option<String>)> for Record {
-    fn from((timestamp, num_existing, note): (DateTime<Local>, usize, Option<String>)) -> Self {
+impl From<(Timestamp, usize, Option<String>)> for Record {
+    fn from((timestamp, num_existing, note): (Timestamp, usize, Option<String>)) -> Self {
         Record {
             i: num_existing,
             start: timestamp,
@@ -50,10 +72,6 @@ impl From<(DateTime<Local>, usize, Option<String>)> for Record {
 
 impl fmt::Display for Record {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            Formatter::format_record(&self, &Default::default())
-        )
+        write!(f, "{}", &self.format_with(&Default::default()))
     }
 }

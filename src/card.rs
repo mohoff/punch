@@ -3,16 +3,14 @@ use std::fs::{self, File, OpenOptions};
 use std::path::PathBuf;
 
 use ::csv::{Reader, ReaderBuilder, Writer, WriterBuilder};
-use chrono::{DateTime, Local};
 use colored::*;
 use dirs;
 
 use crate::bucket::RecordBucket;
-use crate::cli::Interval;
 use crate::err::*;
-use crate::format::{FormatRecordOptions, Formatter};
+use crate::format::CardFormattingOptions;
 use crate::record::Record;
-use crate::round::RoundingOptions;
+use crate::time::Timestamp;
 
 const CARD_EXT: &str = "csv";
 const CARD_NAME_DEFAULT: &str = "main";
@@ -41,7 +39,7 @@ impl Card {
             .expect("Could not convert card path to name")
     }
 
-    pub fn punch_in(&self, timestamp: DateTime<Local>, note: Option<&str>) -> Result<()> {
+    pub fn punch_in(&self, timestamp: Timestamp, note: Option<&str>) -> Result<()> {
         let mut reader = self.get_reader()?;
 
         let mut records = reader
@@ -64,7 +62,7 @@ impl Card {
         Card::write_records_to_file(writer, records)
     }
 
-    pub fn punch_out(&self, timestamp: DateTime<Local>, note: Option<String>) -> Result<()> {
+    pub fn punch_out(&self, timestamp: Timestamp, note: Option<String>) -> Result<()> {
         let mut reader = self.get_reader()?;
 
         let mut records = reader
@@ -99,12 +97,7 @@ impl Card {
         Card::write_records_to_file(writer, records)
     }
 
-    pub fn display_with(
-        &self,
-        interval: Interval,
-        precise: bool,
-        rounding: RoundingOptions,
-    ) -> Result<()> {
+    pub fn display_with(&self, mut opts: CardFormattingOptions) -> Result<()> {
         let mut reader = self.get_reader()?;
 
         let mut num_total_records = 0;
@@ -113,11 +106,11 @@ impl Card {
             .filter_map(std::result::Result::ok)
             .fold(BTreeMap::new(), |mut acc, record: Record| {
                 num_total_records += 1;
-                let key = record.bucket_key(interval);
+                let key = record.bucket_key(opts.interval);
 
                 #[allow(clippy::or_fun_call)]
                 acc.entry(key)
-                    .or_insert(RecordBucket::new(interval, precise))
+                    .or_insert(RecordBucket::new(opts.interval, opts.record_opts.precise))
                     .add(record);
 
                 acc
@@ -128,14 +121,10 @@ impl Card {
         match num_total_records {
             0 => println!("{}\n", "no punches yet".italic().dimmed()),
             n => {
-                let opts = FormatRecordOptions {
-                    align_with_n_records: n,
-                    precise,
-                    rounding,
-                };
+                opts.record_opts.align_with_n_records = n;
 
                 for bucket in bucket_map.values() {
-                    println!("{}", Formatter::format_bucket(bucket, &opts));
+                    bucket.display_with(&opts.record_opts);
                 }
             }
         }

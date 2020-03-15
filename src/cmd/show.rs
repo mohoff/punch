@@ -1,10 +1,9 @@
 use crate::card::Card;
-use crate::cli::Interval;
 use crate::err::*;
-use crate::round::RoundingOptions;
+use crate::format::CardFormattingOptions;
 
-pub fn run(interval: Interval, precise: bool, rounding: RoundingOptions) -> Result<()> {
+pub fn run(opts: CardFormattingOptions) -> Result<()> {
     let card: Card = Default::default();
 
-    card.display_with(interval, precise, rounding)
+    card.display_with(opts)
 }

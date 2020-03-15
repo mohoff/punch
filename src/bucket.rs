@@ -1,29 +1,28 @@
 use std::fmt;
 
-use chrono::{self, DateTime, Local};
 use colored::*;
 
-use crate::cli::Interval;
-use crate::duration::Duration;
-use crate::duration::Mean;
-use crate::format::{FormatRecordOptions, Formatter};
+use crate::format::RecordFormattingOptions;
 use crate::record::Record;
+use crate::time::Mean;
+use crate::time::{Duration, Interval, Timestamp};
 
 pub struct RecordBucket(pub Vec<Record>, Interval, bool);
 
 impl fmt::Display for RecordBucket {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let opts = FormatRecordOptions {
+        let opts = RecordFormattingOptions {
             align_with_n_records: self.size(),
             precise: self.2,
-            rounding: Default::default(),
+            timezone: true,
+            rounding_opts: Default::default(),
         };
 
         writeln!(f, "{}", self.name().bold().underline().to_string())?;
-        writeln!(f, "{}", self.stats_formatted(&opts))?;
+        writeln!(f, "{}", self.format_stats_with(&opts))?;
 
         for record in self.0.iter() {
-            writeln!(f, "{}", Formatter::format_record(record, &opts))?;
+            writeln!(f, "{}", record.format_with(&opts))?;
         }
 
         Ok(())
@@ -41,9 +40,9 @@ impl RecordBucket {
         let date = (self.0)[0].start;
 
         match self.1 {
+            Interval::Second => unreachable!(),
             Interval::Minute => {
-                let next_date: DateTime<Local> =
-                    date + Into::<chrono::Duration>::into(Duration::one_minute());
+                let next_date: Timestamp = date + Duration::one_minute();
 
                 let fst = date.format("%F (%A), %H:%M-");
                 let snd = next_date.format("%H:%M (%Z)");
@@ -51,48 +50,61 @@ impl RecordBucket {
                 format!("{}{}", fst, snd)
             }
             Interval::Hour => {
-                let d: chrono::Duration = Duration::one_hour().into();
-                let next_date: DateTime<Local> = date + d;
+                let next_date: Timestamp = date + Duration::one_hour();
 
                 let fst = date.format("%F (%A), %H:00-");
                 let snd = next_date.format("%H:00 (%Z)");
 
                 format!("{}{}", fst, snd)
             }
-            Interval::Day => date.format("%F (%A)").to_string(),
-            Interval::Week => date.format("CW %U (%B %Y)").to_string(),
-            Interval::Month => date.format("%B %Y").to_string(),
-            Interval::Year => date.format("%Y").to_string(),
+            Interval::Day => date.format("%F (%A)"),
+            Interval::Week => date.format("CW %U (%B %Y)"),
+            Interval::Month => date.format("%B %Y"),
+            Interval::Year => date.format("%Y"),
         }
-    }
-    pub fn stats_formatted(&self, opt: &FormatRecordOptions) -> String {
-        let num_punches = self.size().to_string().bright_green();
-
-        let sum = self.duration_sum();
-        let avg = self.duration_avg();
-
-        let rounded_sum = sum.round(&opt.rounding);
-        let sum_of_rounded = self.rounded_duration_sum(&opt);
-
-        format!(
-            "{} ⏺️  - sum: {}, rounded sum: {}, sum of rounded: {}, avg: {}",
-            num_punches,
-            sum.format().bright_green(),
-            rounded_sum.format().bright_green(),
-            sum_of_rounded.format().bright_green(),
-            avg.format().bright_green(),
-        )
     }
     fn size(&self) -> usize {
         self.0.len()
     }
-    fn rounded_duration_sum(&self, opt: &FormatRecordOptions) -> Duration {
-        self.duration_sum().round(&opt.rounding)
+    fn rounded_duration_sum(&self, opt: &RecordFormattingOptions) -> Duration {
+        self.duration_sum().round(&opt.rounding_opts)
     }
     fn duration_sum(&self) -> Duration {
         self.0.iter().map(|r| r.duration()).sum::<Duration>()
     }
     fn duration_avg(&self) -> Duration {
         Mean::mean(self.0.iter().map(|r| r.duration()))
+    }
+    pub fn display_with(&self, opts: &RecordFormattingOptions) {
+        let records = (self.0)
+            .iter()
+            .map(|r| r.format_with(&opts))
+            .collect::<Vec<_>>()
+            .join("\n");
+
+        println!(
+            "{}\n{}\n{}\n",
+            self.name().bold().underline().to_string(),
+            self.format_stats_with(&opts),
+            records
+        )
+    }
+    pub fn format_stats_with(&self, opt: &RecordFormattingOptions) -> String {
+        let num_punches = self.size().to_string().bright_green();
+
+        let sum = self.duration_sum();
+        let avg = self.duration_avg();
+
+        let rounded_sum = sum.round(&opt.rounding_opts);
+        let sum_of_rounded = self.rounded_duration_sum(&opt);
+
+        format!(
+            "{} ⏺️  - sum: {}, rounded sum: {}, sum of rounded: {}, avg: {}",
+            num_punches,
+            sum.format(&opt.rounding_opts).bright_green(),
+            rounded_sum.format(&opt.rounding_opts).bright_green(),
+            sum_of_rounded.format(&opt.rounding_opts).bright_green(),
+            avg.format(&opt.rounding_opts).bright_green(),
+        )
     }
 }
