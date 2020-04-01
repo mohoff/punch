@@ -186,14 +186,15 @@ impl Timestamp {
     pub fn floor_to_interval_units(&self, interval: Interval) -> u32 {
         use chrono::Datelike;
 
+        let year = self.0.year() as u32;
         match interval {
             Interval::Second => self.0.timestamp() as u32,
             Interval::Minute => (self.0.timestamp() / 60) as u32,
             Interval::Hour => (self.0.timestamp() / 3600) as u32,
-            Interval::Day => self.0.day(),
-            Interval::Week => self.0.iso_week().week(),
-            Interval::Month => self.0.month(),
-            Interval::Year => self.0.year() as u32,
+            Interval::Day => year * 10000 + self.0.month() * 100 + self.0.day(),
+            Interval::Week => year * 100 + self.0.iso_week().week(),
+            Interval::Month => year * 100 + self.0.month(),
+            Interval::Year => year,
         }
     }
 }
