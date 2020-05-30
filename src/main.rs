@@ -35,6 +35,9 @@ fn run() -> Result<()> {
     let matches = cli::get_matches();
 
     match matches.subcommand() {
+        ("status", _) => {
+            cmd::status::run()
+        }
         ("in", Some(in_matches)) => {
             let note = in_matches.value_of("note");
             cmd::inn::run(note)

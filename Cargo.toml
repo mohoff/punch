@@ -1,6 +1,6 @@
 [package]
 name = "pnch"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Moritz Hoffmann <mohoff@web.de>"]
 description = "Simple time tracking from the command line"
 documentation = "https://github.com/mohoff/punch"

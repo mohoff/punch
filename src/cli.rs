@@ -19,6 +19,10 @@ pub fn get_matches<'a>() -> ArgMatches<'a> {
             AppSettings::GlobalVersion,
         ])
         .subcommand(
+            SubCommand::with_name("status")
+                .about("Show punch status"),
+        )
+        .subcommand(
             SubCommand::with_name("in")
                 .about("Punch in - start tracking time")
                 .arg(&arg_note),

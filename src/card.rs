@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 use std::fs::{self, File, OpenOptions};
 use std::path::PathBuf;
+use std::fmt;
 
 use ::csv::{Reader, ReaderBuilder, Writer, WriterBuilder};
 use colored::*;
@@ -17,6 +18,19 @@ const CARD_NAME_DEFAULT: &str = "main";
 const CARD_DIR: &str = ".punch";
 
 pub struct Card(PathBuf);
+
+#[derive(Debug)]
+pub enum CardStatus {
+    PunchedIn,
+    PunchedOut,
+    Corrupted,
+}
+
+impl fmt::Display for CardStatus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
 
 impl Card {
     fn new(path: PathBuf) -> Result<Self> {
@@ -37,6 +51,25 @@ impl Card {
             .expect("Could not get card name")
             .to_str()
             .expect("Could not convert card path to name")
+    }
+
+    pub fn status(&self) -> Result<CardStatus> {
+        let mut reader = self.get_reader()?;
+
+        let mut records = reader
+            .deserialize()
+            .filter_map(std::result::Result::ok)
+            .collect::<Vec<Record>>();
+
+        let last = records.pop();
+
+        if !records.iter().all(|r| r.is_terminated()) {
+            Ok(CardStatus::Corrupted)
+        } else if last.is_none() || last.as_ref().unwrap().end.is_some() {
+            Ok(CardStatus::PunchedOut)
+        } else {
+            Ok(CardStatus::PunchedIn)
+        }
     }
 
     pub fn punch_in(&self, timestamp: Timestamp, note: Option<&str>) -> Result<()> {
