@@ -23,6 +23,10 @@ pub fn get_matches<'a>() -> ArgMatches<'a> {
                 .about("Show punch status"),
         )
         .subcommand(
+            SubCommand::with_name("edit")
+                .about("Edit a punch card"),
+        )
+        .subcommand(
             SubCommand::with_name("in")
                 .about("Punch in - start tracking time")
                 .arg(&arg_note),

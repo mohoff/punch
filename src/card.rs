@@ -52,6 +52,9 @@ impl Card {
             .to_str()
             .expect("Could not convert card path to name")
     }
+    pub fn path(&self) -> &PathBuf {
+        &self.0
+    }
 
     pub fn status(&self) -> Result<CardStatus> {
         let mut reader = self.get_reader()?;

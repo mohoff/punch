@@ -11,6 +11,9 @@ error_chain! {
         HomeDirNotFound {
             display("Failed to determine home directory."),
         }
+        EnvVarNotFound(name: String) {
+            display("Environment variable must be set: {}", name),
+        }
         FileDoesNotExist(path: String) {
             display("File does not exist: {}", path),
         }

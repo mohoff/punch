@@ -68,6 +68,10 @@ fn run() -> Result<()> {
 
             cmd::show::run(opts)
         }
+        ("edit", _) => {
+            cmd::edit::run()?;
+            Ok(())
+        }
         // clap takes care of unmatched subcommands
         _ => unreachable!(),
     }
