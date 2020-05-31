@@ -85,7 +85,7 @@ impl Card {
             return Err(ErrorKind::IncorrectCardStateForIn.into());
         }
 
-        records.push(Record::from((
+        records.insert(0, Record::from((
             timestamp,
             records.len(),
             note.map(String::from),
@@ -103,28 +103,25 @@ impl Card {
             .filter_map(std::result::Result::ok)
             .collect::<Vec<Record>>();
 
-        let last = records.pop();
-
-        // Check that all 0..n-1 records have an end
-        // date and that record n can be terminated.
-        if !records.iter().all(|r| r.is_terminated())
-            || last.is_none()
-            || last.as_ref().unwrap().end.is_some()
+        // Check that all 1..n records have an end date
+        // and that the first record can be terminated.
+        if !records.iter().skip(1).all(|r| r.is_terminated())
+            || records.first().is_none()
+            || records.first().as_ref().unwrap().end.is_some()
         {
             return Err(ErrorKind::IncorrectCardStateForOut.into());
         }
 
-        let mut last = last.unwrap();
-        last.end.replace(timestamp);
+        let first = records.first_mut().unwrap();
+        first.end.replace(timestamp);
 
         if let Some(snd) = note {
-            let new_note = last
+            let new_note = first
                 .note
                 .as_ref()
                 .map_or(snd.clone(), |fst| format!("{};{}", fst, snd));
-            last.note.replace(new_note);
+            first.note.replace(new_note);
         }
-        records.push(last);
 
         let writer = self.get_writer()?;
         Card::write_records_to_file(writer, records)

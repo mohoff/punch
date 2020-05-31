@@ -78,6 +78,7 @@ impl RecordBucket {
     pub fn display_with(&self, opts: &RecordFormattingOptions) {
         let records = (self.0)
             .iter()
+            .rev()
             .map(|r| r.format_with(&opts))
             .collect::<Vec<_>>()
             .join("\n");
