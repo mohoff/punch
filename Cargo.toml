@@ -12,6 +12,10 @@ categories = ["command-line-utilities"]
 keywords = ["timetracking", "productivity"]
 edition = "2018"
 
+[[bin]]
+name = "punch"
+path = "src/main.rs"
+
 [dependencies]
 clap = "2.33.0"
 serde = { version = "1.0.104", features = ["derive"] }
