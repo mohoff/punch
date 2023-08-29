@@ -25,6 +25,16 @@ Running `punch show day` based on some test data:
 
 ![terminal output](./screenshot.png)
 
+## Installing
+
+The project is available as the crate "pnch" [on crates.io](https://crates.io/crates/pnch).
+
+Assuming you have [installed cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html):
+
+```
+cargo install pnch
+```
+
 ## Future improvements
 - Support multiple punch cards and allow switching between them. E.g. with `punch list` and `punch switch`.
 - Tests
